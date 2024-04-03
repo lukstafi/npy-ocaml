@@ -41,7 +41,7 @@ let save_with_python
     let cmd =
       Printf.sprintf
         {|
-python -c '
+python3 -c '
 import numpy as np
 arr = np.array(%s)
 np.save("%s", arr.astype("%s"))'
@@ -65,7 +65,7 @@ np.save("%s", arr.astype("%s"))'
 let load_and_save_using_python input_filename output_filename =
   let cmd =
     Printf.sprintf
-      "python -c 'import numpy as np\narr = np.load(\"%s\")\nnp.save(\"%s\", arr)'"
+      "python3 -c 'import numpy as np\narr = np.load(\"%s\")\nnp.save(\"%s\", arr)'"
       input_filename
       output_filename
   in

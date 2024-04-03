@@ -4,6 +4,7 @@ bug-reports:  "https://github.com/LaurentMazare/npy-ocaml/issues"
 homepage:     "https://github.com/LaurentMazare/npy-ocaml"
 dev-repo:     "git+https://github.com/LaurentMazare/npy-ocaml.git"
 maintainer:   "Laurent Mazare <lmazare@gmail.com>"
+synopsis:     "Numpy file format support for ocaml"
 authors:      [ "Laurent Mazare" ]
 
 version: "dev"
@@ -16,6 +17,7 @@ depends: [
   "camlzip"
   "dune" {build}
   "ocaml" {>= "4.06"}
+  "conf-python-3" {with-test}
 ]
 
 depopts: [
