@@ -191,6 +191,13 @@ let npz_test ~use_python_generated_file =
     let array2 = to_array2 array2 in
     assert (array2 = array2_v)
   | _ -> assert false);
+  let array2_restore =
+    Bigarray.genarray_of_array2 @@ Bigarray.Array2.of_array Float32 C_layout array2_v
+  in
+  Bigarray.Genarray.fill array2_restore 0.;
+  assert (not (to_array2 array2_restore = array2_v));
+  Npy.Npz.restore npz "test2" array2_restore;
+  assert (to_array2 array2_restore = array2_v);
   Npy.Npz.close_in npz;
   if not use_python_generated_file then Sys.remove npz_file
 

@@ -354,56 +354,6 @@ let read_copy3 filename =
   let (P array) = read_copy filename in
   P3 (Bigarray.array3_of_genarray array)
 
-module Npz = struct
-  let npy_suffix = ".npy"
-
-  let maybe_add_suffix array_name ~suffix =
-    let suffix = match suffix with None -> npy_suffix | Some suffix -> suffix in
-    array_name ^ suffix
-
-  type in_file = Zip.in_file
-
-  let open_in = Zip.open_in
-
-  let entries t =
-    Zip.entries t
-    |> List.map (fun entry ->
-           let filename = entry.Zip.filename in
-           if String.length filename < String.length npy_suffix
-           then filename
-           else
-             let start_pos = String.length filename - String.length npy_suffix in
-             if String.sub filename start_pos (String.length npy_suffix) = npy_suffix
-             then String.sub filename 0 start_pos
-             else filename )
-
-  let close_in = Zip.close_in
-
-  let read ?suffix t array_name =
-    let array_name = maybe_add_suffix array_name ~suffix in
-    let entry =
-      try Zip.find_entry t array_name with Not_found ->
-        raise (Invalid_argument ("unable to find " ^ array_name))
-    in
-    let tmp_file = Filename.temp_file "ocaml-npz" ".tmp" in
-    Zip.copy_entry_to_file t entry tmp_file;
-    let data = read_copy tmp_file in
-    Sys.remove tmp_file;
-    data
-
-  type out_file = Zip.out_file
-
-  let open_out filename = Zip.open_out filename
-  let close_out = Zip.close_out
-
-  let write ?suffix t array_name array =
-    let array_name = maybe_add_suffix array_name ~suffix in
-    let tmp_file = Filename.temp_file "ocaml-npz" ".tmp" in
-    write array tmp_file;
-    Zip.copy_file_to_entry tmp_file t array_name;
-    Sys.remove tmp_file
-end
-
 (** Type equalities module, used in conversion function *)
 module Eq = struct
   (** An equality type to extract type equalities *)
@@ -481,3 +431,75 @@ let to_bigarray3
     (match Eq.Kind.(Bigarray.Array3.kind x === kind) with
     | None -> None
     | Some Eq.W -> Some (x : (a, b, c) Bigarray.Array3.t))
+
+module Npz = struct
+  let npy_suffix = ".npy"
+
+  let maybe_add_suffix array_name ~suffix =
+    let suffix = match suffix with None -> npy_suffix | Some suffix -> suffix in
+    array_name ^ suffix
+
+  type in_file = Zip.in_file
+
+  let open_in = Zip.open_in
+
+  let entries t =
+    Zip.entries t
+    |> List.map (fun entry ->
+           let filename = entry.Zip.filename in
+           if String.length filename < String.length npy_suffix
+           then filename
+           else (
+             let start_pos = String.length filename - String.length npy_suffix in
+             if String.sub filename start_pos (String.length npy_suffix) = npy_suffix
+             then String.sub filename 0 start_pos
+             else filename))
+
+  let close_in = Zip.close_in
+
+  let read ?suffix t array_name =
+    let array_name = maybe_add_suffix array_name ~suffix in
+    let entry =
+      try Zip.find_entry t array_name with Not_found ->
+        raise (Invalid_argument ("unable to find " ^ array_name))
+    in
+    let tmp_file = Filename.temp_file "ocaml-npz" ".tmp" in
+    Zip.copy_entry_to_file t entry tmp_file;
+    let data = read_copy tmp_file in
+    Sys.remove tmp_file;
+    data
+
+  let restore ?suffix t array_name array =
+    let array_name = maybe_add_suffix array_name ~suffix in
+    let entry =
+      try Zip.find_entry t array_name with
+      | Not_found -> raise (Invalid_argument ("unable to find " ^ array_name))
+    in
+    let tmp_file = Filename.temp_file "ocaml-npz" ".tmp" in
+    let convert =
+      to_bigarray (Bigarray.Genarray.layout array) (Bigarray.Genarray.kind array)
+    in
+    Zip.copy_entry_to_file t entry tmp_file;
+    match convert @@ read_mmap tmp_file ~shared:false with
+    | Some result ->
+      Bigarray.Genarray.blit result array;
+      Sys.remove tmp_file
+    | None ->
+      Sys.remove tmp_file;
+      raise (Invalid_argument ("datatype mismatch when restoring " ^ array_name))
+    | exception exn ->
+      Sys.remove tmp_file;
+      raise exn
+
+  type out_file = Zip.out_file
+
+  let open_out filename = Zip.open_out filename
+  let close_out = Zip.close_out
+
+  let write ?suffix t array_name array =
+    let array_name = maybe_add_suffix array_name ~suffix in
+    let tmp_file = Filename.temp_file "ocaml-npz" ".tmp" in
+    write array tmp_file;
+    Zip.copy_file_to_entry tmp_file t array_name;
+    Sys.remove tmp_file
+end

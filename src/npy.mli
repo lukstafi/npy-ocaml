@@ -40,6 +40,12 @@ module Npz : sig
 
   val open_in : string -> in_file
   val read : ?suffix:string -> in_file -> string -> packed_array
+
+  (** Like {!read}, but stores the data directly in the provided bigarray. *)
+  val restore :
+    ?suffix:string -> in_file -> string -> ('a, 'b, 'c) Bigarray.Genarray.t
+    -> unit
+
   val entries : in_file -> string list
   val close_in : in_file -> unit
 
