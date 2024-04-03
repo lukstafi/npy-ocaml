@@ -2,7 +2,7 @@
  (names test)
  (libraries npy))
 
-(alias
- (name    runtest)
+(rule
+ (alias    runtest)
  (deps    test.exe test.npz)
  (action  (bash ./test.exe)))
